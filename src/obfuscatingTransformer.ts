@@ -50,7 +50,7 @@ export function obfuscatingTransformer({
     ..._obfuscatorOptions,
     sourceMap: true,
     sourceMapMode: "separate",
-    stringArray: false,
+    // stringArray: false,
   }
 
   return {
@@ -72,39 +72,45 @@ export function obfuscatingTransformer({
           ? result
           : result.ast
             ? (generate(result.ast, {
-                filename: props.filename,
-                retainLines: true,
-                sourceMaps: true,
-                sourceFileName: props.filename,
-              }) as MetroTransformerResult)
+              filename: props.filename,
+              retainLines: true,
+              sourceMaps: true,
+              sourceFileName: props.filename,
+            }) as MetroTransformerResult)
             : { code: "", map: "" }
 
         if (!code) {
           return result
         } else if (!map) {
+          console.log('without map')
           return {
             code: obfuscateCode(code, obfuscatorOptions),
           }
         }
 
+        let newCode = obfuscateCodePreservingSourceMap(
+          code,
+          map,
+          props.filename,
+          props.src,
+          obfuscatorOptions,
+        )
         if (otherOptions.emitObfuscatedFiles) {
           const emitDir = path.dirname(props.filename)
           const filename = extendFileExtension(
             path.basename(props.filename),
             "obfuscated",
           )
-          fs.writeFileSync(path.join(emitDir, filename), code)
+          fs.writeFileSync(path.join(emitDir, extendFileExtension(
+            path.basename(props.filename),
+            "original",
+          )), code)
+          fs.writeFileSync(path.join(emitDir, filename), newCode.code)
         }
-
         return maybeTransformMetroResult(
           result,
-          obfuscateCodePreservingSourceMap(
-            code,
-            map,
-            props.filename,
-            props.src,
-            obfuscatorOptions,
-          ),
+          newCode
+          ,
         )
       }
 
